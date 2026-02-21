@@ -21,13 +21,17 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 WHATSAPP_PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
 WEBHOOK_VERIFY_TOKEN = os.getenv("WEBHOOK_VERIFY_TOKEN")
+# Optional: set to your public base URL (e.g. ngrok https URL) to see the full callback URL on startup
+APP_PUBLIC_URL = (os.getenv("APP_PUBLIC_URL") or "").rstrip("/")
 
 WHATSAPP_GRAPH_URL = "https://graph.facebook.com/v21.0"
+
+WEBHOOK_PATH = "/webhook"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load env and validate on startup."""
+    """Load env, validate, and print startup info with callback URL for Meta."""
     missing = []
     if not OPENAI_API_KEY:
         missing.append("OPENAI_API_KEY")
@@ -39,6 +43,22 @@ async def lifespan(app: FastAPI):
         missing.append("WEBHOOK_VERIFY_TOKEN")
     if missing:
         print(f"Warning: missing env vars (webhook/send may fail): {missing}")
+
+    # Startup banner: local URL and callback URL for Meta
+    print("\n" + "=" * 60)
+    print("  WhatsApp LLM – server running")
+    print("=" * 60)
+    print(f"  Local:        http://localhost:8000")
+    print(f"  Webhook path: {WEBHOOK_PATH}")
+    if APP_PUBLIC_URL:
+        callback_url = f"{APP_PUBLIC_URL}{WEBHOOK_PATH}"
+        print(f"  Callback URL for Meta:  {callback_url}")
+        print("  → Paste the above into Meta’s Callback URL field.")
+    else:
+        print("  To see your Callback URL: run ngrok (e.g. ngrok http 8000),")
+        print("  then set APP_PUBLIC_URL in .env to the ngrok https URL and restart.")
+    print("=" * 60 + "\n")
+
     yield
 
 
@@ -48,7 +68,7 @@ app = FastAPI(title="WhatsApp LLM", lifespan=lifespan)
 # ----- Webhook: verification (GET) -----
 
 
-@app.get("/webhook")
+@app.get(WEBHOOK_PATH)
 async def webhook_verify(
     mode: str | None = Query(None, alias="hub.mode"),
     token: str | None = Query(None, alias="hub.verify_token"),
@@ -144,7 +164,7 @@ def send_whatsapp_text(phone_number_id: str, to_phone: str, text: str) -> bool:
         return False
 
 
-@app.post("/webhook")
+@app.post(WEBHOOK_PATH)
 async def webhook_receive(request: Request):
     """
     Receive incoming WhatsApp messages from Meta.

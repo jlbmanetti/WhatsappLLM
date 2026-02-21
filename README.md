@@ -226,6 +226,12 @@ python app.py
 # Or: uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-- **Local**: Server runs at `http://localhost:8000`. Webhook: `http://localhost:8000/webhook`.
-- **For WhatsApp**: Expose with **ngrok** (e.g. `ngrok http 8000`) and use the `https://...` URL in Meta’s webhook configuration (e.g. `https://xxxx.ngrok.io/webhook`).
+- **Local**: Server runs at `http://localhost:8000`. Webhook path: `/webhook`.
 - **Docs**: Open `http://localhost:8000/docs` for Swagger UI.
+
+**Get your Callback URL for Meta**
+
+1. Start the app (as above), then in another terminal run: `ngrok http 8000`.
+2. Copy the **https** URL ngrok shows (e.g. `https://a1b2c3.ngrok-free.app`).
+3. **Option A** – Paste into Meta: use `https://a1b2c3.ngrok-free.app/webhook` as the Callback URL in Meta’s webhook configuration.
+4. **Option B** – Add to `.env` as `APP_PUBLIC_URL=https://a1b2c3.ngrok-free.app` (no `/webhook`), restart the app, and the console will print the exact Callback URL to copy into Meta.
