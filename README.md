@@ -20,6 +20,29 @@ api_key = os.getenv("OPENAI_API_KEY")
 
 ---
 
+## venv vs load_dotenv (what’s the difference?)
+
+| | **venv** (virtual environment) | **load_dotenv()** (python-dotenv) |
+|---|---|---|
+| **What it does** | Isolates your project’s Python and installed packages | Loads variables from a `.env` file into your app (e.g. API keys) |
+| **Solves** | “Which Python and which packages?” | “Where do config and secrets come from?” |
+| **Example** | `python -m venv .venv` then `pip install -r requirements.txt` | `load_dotenv()` then `os.getenv("OPENAI_API_KEY")` |
+
+- **venv** = dependency isolation (so this project doesn’t mix with others or the system).
+- **load_dotenv** = safe config/secrets (so the key lives in `.env`, not in code).
+
+You can use both: create a venv for the project and use `load_dotenv()` in your code to read the API key from `.env`.
+
+**Optional – use a venv for this project:**
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate    # Windows
+pip install -r requirements.txt
+```
+
+---
+
 ## Git and GitHub
 
 ### Is it a good idea to use GitHub?
