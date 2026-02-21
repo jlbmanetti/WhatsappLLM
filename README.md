@@ -217,21 +217,40 @@ So: **Flask would achieve the same capabilities** for this project. We’re usin
 
 No database is required for “simple questions”: stateless request → LLM → reply. We can add a small in-memory or Redis store later if we want multi-turn context per user.
 
-### Run the app
+### Run the app (virtual environment + requirements)
+
+All **Python** dependencies are in `requirements.txt`. Use a venv so they stay isolated:
+
+```powershell
+# From project root
+py -3 -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+py -3 app.py
+```
+
+Or with `python` if it’s in your PATH:
 
 ```bash
-# From project root, with venv activated
+python -m venv .venv
+.venv\Scripts\Activate.ps1   # Windows PowerShell
+# source .venv/bin/activate   # Linux/macOS
 pip install -r requirements.txt
 python app.py
-# Or: uvicorn app:app --reload --host 0.0.0.0 --port 8000
 ```
 
 - **Local**: Server runs at `http://localhost:8000`. Webhook path: `/webhook`.
 - **Docs**: Open `http://localhost:8000/docs` for Swagger UI.
 
-**Get your Callback URL for Meta**
+The **tunnel** (`tunnel.ps1`) is separate: it uses Node.js (npx/localtrunnel), not Python, so it isn’t in `requirements.txt`. Run it in another terminal when you need a public URL for Meta.
 
-1. Start the app (as above), then in another terminal run: `ngrok http 8000`.
-2. Copy the **https** URL ngrok shows (e.g. `https://a1b2c3.ngrok-free.app`).
-3. **Option A** – Paste into Meta: use `https://a1b2c3.ngrok-free.app/webhook` as the Callback URL in Meta’s webhook configuration.
-4. **Option B** – Add to `.env` as `APP_PUBLIC_URL=https://a1b2c3.ngrok-free.app` (no `/webhook`), restart the app, and the console will print the exact Callback URL to copy into Meta.
+**Get your Callback URL for Meta (easiest: run the tunnel script)**
+
+1. Start the app (see above), then in a **new** terminal run:
+   ```powershell
+   .\tunnel.ps1
+   ```
+2. The script starts a tunnel and prints a public URL. Your **Callback URL for Meta** is that URL + `/webhook` (e.g. `https://xxxx.loca.lt/webhook`).
+3. In Meta’s webhook configuration, set **Callback URL** to that value and **Verify token** to the same string you have in `.env` as `WEBHOOK_VERIFY_TOKEN`, then click **Verify and save**.
+
+Requires Node.js (for `npx`). If you don’t have Node, use: `ssh -R 80:localhost:8000 nokey@localhost.run` and add `/webhook` to the URL it shows.
