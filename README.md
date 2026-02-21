@@ -124,6 +124,42 @@ Because the API key was shared in chat, **consider regenerating it** in the [Ope
 
 Goal: connect WhatsApp to an LLM so users can send messages and get simple answers from GenAI.
 
+### Pre-work: WhatsApp Cloud API setup
+
+Before the app can receive or send WhatsApp messages, you need to set up the official API once:
+
+1. **Meta Developer account**  
+   - Go to [developers.facebook.com](https://developers.facebook.com) and create or use an account.
+
+2. **Create an app**  
+   - **My Apps** → **Create App** → **Other** → **Business** (or **Consumer** for testing).  
+   - Name it (e.g. “WhatsApp LLM”) and create.
+
+3. **Add WhatsApp to the app**  
+   - In the app dashboard, open **Add Products** and add **WhatsApp**.  
+   - Open **WhatsApp** → **API Setup** (or **Getting Started**).
+
+4. **Get credentials** (from **API Setup**):  
+   - **Phone number ID** – used to send messages (put in `.env` as `WHATSAPP_PHONE_NUMBER_ID`).  
+   - **WhatsApp Business Account ID** – shown in the same screen (optional for basic send).  
+   - **Temporary access token** – for testing (put in `.env` as `WHATSAPP_TOKEN`).  
+   For production you’ll create a **System User** and generate a long-lived token.
+
+5. **Webhook URL**  
+   - Your server must be reachable over **HTTPS**. For local development use [ngrok](https://ngrok.com): run your app, then `ngrok http 8000` and use the `https://...` URL.  
+   - In **WhatsApp** → **Configuration** → **Webhook**:  
+     - **Callback URL**: `https://your-domain.com/webhook` (or your ngrok URL + `/webhook`).  
+     - **Verify token**: choose a random secret string (e.g. `my-verify-token-123`) and put the same value in `.env` as `WEBHOOK_VERIFY_TOKEN`.  
+   - Click **Verify and save**. Meta will send a `GET` to your URL with `hub.mode`, `hub.verify_token`, `hub.challenge`; the app must return `hub.challenge` if the token matches.
+
+6. **Subscribe to messages**  
+   - In the same **Webhook** section, under **Webhook fields**, subscribe to **messages**.
+
+7. **Add variables to `.env`** (see `.env.example`):  
+   `OPENAI_API_KEY`, `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WEBHOOK_VERIFY_TOKEN`.
+
+After this one-time setup, when someone sends a message to your WhatsApp number, Meta will `POST` the message to your webhook and your app can reply using the Cloud API.
+
 ### High-level flow
 
 1. User sends a WhatsApp message.
@@ -181,8 +217,15 @@ So: **Flask would achieve the same capabilities** for this project. We’re usin
 
 No database is required for “simple questions”: stateless request → LLM → reply. We can add a small in-memory or Redis store later if we want multi-turn context per user.
 
-### Suggested next steps
+### Run the app
 
-1. Add to `requirements.txt`: `fastapi`, `uvicorn`, `httpx`, keep `openai` and `python-dotenv`.
-2. Implement: one webhook route (WhatsApp Cloud API), one LLM call, one “send reply” call to Meta’s API; run locally and expose with **ngrok** (or similar) so WhatsApp can reach your machine.
-3. Optional: add a “health” route (e.g. `GET /health`) and use Cursor + Git branches to iterate and evaluate each commit as you go.
+```bash
+# From project root, with venv activated
+pip install -r requirements.txt
+python app.py
+# Or: uvicorn app:app --reload --host 0.0.0.0 --port 8000
+```
+
+- **Local**: Server runs at `http://localhost:8000`. Webhook: `http://localhost:8000/webhook`.
+- **For WhatsApp**: Expose with **ngrok** (e.g. `ngrok http 8000`) and use the `https://...` URL in Meta’s webhook configuration (e.g. `https://xxxx.ngrok.io/webhook`).
+- **Docs**: Open `http://localhost:8000/docs` for Swagger UI.
